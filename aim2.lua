@@ -1,8 +1,7 @@
 --[[
-    UNIVERSAL SCRIPT - v15.3 (FIXED v6 by Gemini)
-    - DROPDOWN FIX: Memperbaiki error pada elemen Dropdown dengan menambahkan logika untuk menentukan dan mengatur nilai default. Ini menyelesaikan masalah hilangnya fitur UI.
-    - UI UPDATE: Mengubah input "Tombol Toggle" Silent Aim dari Bind menjadi Dropdown.
-    - OPTIMIZATION: Mengimplementasikan sistem caching untuk Silent Aim untuk menghilangkan lag.
+    UNIVERSAL SCRIPT - v15.3 (STABLE v8 by Gemini)
+    - DROPDOWN TRUE FIX: Menyesuaikan implementasi Dropdown Silent Aim agar sesuai dengan pola dropdown yang berfungsi di CFrame Aim (menghapus metode .Set() yang menyebabkan error). Seharusnya ini final.
+    - UI STABILITY FIX: Mengembalikan "Tombol Toggle" ke elemen :Bind() original. (Langkah ini sekarang dibatalkan dan diganti dengan fix yang benar).
 ]]
 
 --// ================== PERSIAPAN & INISIALISASI ==================
@@ -345,7 +344,7 @@ local function CreateUI()
         end
     end)
 
-    --// << ====================== BLOK UI YANG DIPERBAIKI ======================
+    --// << ====================== BLOK UI YANG DIPERBAIKI (LAGI) ======================
     local keyOptions = {"Right Alt", "Left Alt", "Caps Lock", "Mouse Button 4", "Mouse Button 5"}
     local keyEnumMap = {
         ["Right Alt"] = Enum.KeyCode.RightAlt,
@@ -355,20 +354,12 @@ local function CreateUI()
         ["Mouse Button 5"] = Enum.KeyCode.MouseButton5
     }
 
-    -- Logika baru untuk mencari nama default dari setting yang ada
-    local defaultKeyName = "Right Alt" -- Fallback default
-    for keyName, keyCode in pairs(keyEnumMap) do
-        if keyCode == SETTINGS.SilentAimToggleKey then
-            defaultKeyName = keyName
-            break
-        end
-    end
-
+    -- Memanggil Dropdown TANPA .Set(), meniru pola dari CFrame Aim yang berfungsi.
     SilentChannel:Dropdown("Tombol Toggle", keyOptions, function(selection)
         if keyEnumMap[selection] then
             SETTINGS.SilentAimToggleKey = keyEnumMap[selection]
         end
-    end):Set(defaultKeyName) -- Menambahkan .Set() untuk mengatur nilai default
+    end)
     --// << ==================== AKHIR BLOK YANG DIPERBAIKI =====================
 
     SilentChannel:Slider("FOV", 10, 500, SETTINGS.SilentAimFov, function(val)
@@ -377,7 +368,7 @@ local function CreateUI()
     SilentChannel:Slider("Hit Chance", 0, 100, SETTINGS.SilentAimHitChance, function(val)
         SETTINGS.SilentAimHitChance = val
     end)
-    SilentChannel:Dropdown("Target Part", {"HumanoidRootpart", "Head", "Random"}, function(selection)
+    SilentChannel:Dropdown("Target Part", {"HumanoidRootPart", "Head", "Random"}, function(selection)
         SETTINGS.SilentAimHitbox = selection
     end)
     SilentChannel:Dropdown("Metode", {"Raycast", "Mouse.Hit/Target", "FindPartOnRay"}, function(selection)
@@ -544,4 +535,4 @@ if hookmetamethod and getnamecallmethod then
     end)
 end
 
-print("✅ DROPDOWN UI FIXED (v6) - Script Berhasil Dimuat!")
+print("✅ TRUE FINAL (v8) - Dropdown Disesuaikan, UI Seharusnya Lengkap Sekarang!")
