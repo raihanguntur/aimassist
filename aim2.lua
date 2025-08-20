@@ -1,7 +1,7 @@
 --[[
-    UNIVERSAL SCRIPT - v15.3 (FIXED v5.1 by Gemini)
-    - VERIFICATION: Menambahkan pesan print unik di akhir untuk memastikan versi ini yang dieksekusi.
-    - UI UPDATE: Mengubah input "Tombol Toggle" Silent Aim dari Bind menjadi Dropdown sesuai permintaan.
+    UNIVERSAL SCRIPT - v15.3 (FIXED v6 by Gemini)
+    - DROPDOWN FIX: Memperbaiki error pada elemen Dropdown dengan menambahkan logika untuk menentukan dan mengatur nilai default. Ini menyelesaikan masalah hilangnya fitur UI.
+    - UI UPDATE: Mengubah input "Tombol Toggle" Silent Aim dari Bind menjadi Dropdown.
     - OPTIMIZATION: Mengimplementasikan sistem caching untuk Silent Aim untuk menghilangkan lag.
 ]]
 
@@ -345,15 +345,7 @@ local function CreateUI()
         end
     end)
 
-    --// << ====================== BLOK UI YANG DIUBAH ======================
-    --// Baris lama yang menggunakan :Bind() dihapus:
-    --[[
-    SilentChannel:Bind("Tombol Toggle", SETTINGS.SilentAimToggleKey, function(key)
-        SETTINGS.SilentAimToggleKey = key
-    end)
-    ]]
-
-    --// Blok baru yang menggunakan :Dropdown() ditambahkan:
+    --// << ====================== BLOK UI YANG DIPERBAIKI ======================
     local keyOptions = {"Right Alt", "Left Alt", "Caps Lock", "Mouse Button 4", "Mouse Button 5"}
     local keyEnumMap = {
         ["Right Alt"] = Enum.KeyCode.RightAlt,
@@ -363,12 +355,21 @@ local function CreateUI()
         ["Mouse Button 5"] = Enum.KeyCode.MouseButton5
     }
 
+    -- Logika baru untuk mencari nama default dari setting yang ada
+    local defaultKeyName = "Right Alt" -- Fallback default
+    for keyName, keyCode in pairs(keyEnumMap) do
+        if keyCode == SETTINGS.SilentAimToggleKey then
+            defaultKeyName = keyName
+            break
+        end
+    end
+
     SilentChannel:Dropdown("Tombol Toggle", keyOptions, function(selection)
         if keyEnumMap[selection] then
             SETTINGS.SilentAimToggleKey = keyEnumMap[selection]
         end
-    end)
-    --// << ==================== AKHIR BLOK YANG DIUBAH =====================
+    end):Set(defaultKeyName) -- Menambahkan .Set() untuk mengatur nilai default
+    --// << ==================== AKHIR BLOK YANG DIPERBAIKI =====================
 
     SilentChannel:Slider("FOV", 10, 500, SETTINGS.SilentAimFov, function(val)
         SETTINGS.SilentAimFov = val
@@ -543,4 +544,4 @@ if hookmetamethod and getnamecallmethod then
     end)
 end
 
-print("✅ VERSI DROPDOWN FIX (v5.1) Berhasil Dimuat! Cek UI Anda.")
+print("✅ DROPDOWN UI FIXED (v6) - Script Berhasil Dimuat!")
