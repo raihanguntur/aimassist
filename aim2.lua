@@ -1,8 +1,8 @@
 --[[
-    UNIVERSAL SCRIPT - v15.3 (FIXED v5 by Gemini)
+    UNIVERSAL SCRIPT - v15.3 (FIXED v5.1 by Gemini)
+    - VERIFICATION: Menambahkan pesan print unik di akhir untuk memastikan versi ini yang dieksekusi.
     - UI UPDATE: Mengubah input "Tombol Toggle" Silent Aim dari Bind menjadi Dropdown sesuai permintaan.
     - OPTIMIZATION: Mengimplementasikan sistem caching untuk Silent Aim untuk menghilangkan lag.
-    - FIX v3: Mengubah Box ESP menjadi solid (Filled = true) dan semi-transparan (Transparency = 0.5) untuk visibilitas maksimal. Snapline juga ditebalkan.
 ]]
 
 --// ================== PERSIAPAN & INISIALISASI ==================
@@ -543,4 +543,4 @@ if hookmetamethod and getnamecallmethod then
     end)
 end
 
-print("✅ Script v15.3 (UI Updated v5) Berhasil Dimuat!")
+print("✅ VERSI DROPDOWN FIX (v5.1) Berhasil Dimuat! Cek UI Anda.")
