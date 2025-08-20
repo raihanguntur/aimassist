@@ -46,9 +46,9 @@ local SETTINGS = {
     silentAimPrediction = false,
     silentAimPredictionAmount = 0.165,
     -- New smooth settings
-    smoothSilentAim = true,
-    silentAimSmoothness = 0.8,
-    restoreMousePosition = true,
+    smoothSilentAim = not isMobile, -- Disable smooth for mobile to reduce lag
+    silentAimSmoothness = isMobile and 0.3 or 0.8, -- Faster for mobile
+    restoreMousePosition = not isMobile, -- Disable restore for mobile
 }
 
 -- Variables
@@ -62,6 +62,11 @@ local enabled = false
 local silentAiming = false
 local originalMousePos = Vector2.new(0, 0)
 local restoreMouse = false
+
+-- Mobile optimization variables
+local isMobile = game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").KeyboardEnabled
+local lastSilentAimTime = 0
+local silentAimCooldown = isMobile and 0.1 or 0.01 -- Longer cooldown for mobile
 
 -- Universal Silent Aim Variables
 local ExpectedArguments = {
@@ -604,10 +609,22 @@ local success, uiError = pcall(function()
         print("⚠️ Using PlayerGui instead of CoreGui")
     end
 
+    -- Detect if mobile
+    local isMobile = game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").KeyboardEnabled
+    
     MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 200, 0, 1350)
-    MainFrame.Position = UDim2.new(1, -220, 0.5, -675)
+    
+    if isMobile then
+        -- Mobile layout: larger and touch-friendly
+        MainFrame.Size = UDim2.new(0, 280, 0, 750) -- Increased height for presets
+        MainFrame.Position = UDim2.new(0.5, -140, 0, 20)
+    else
+        -- PC layout: compact side panel
+        MainFrame.Size = UDim2.new(0, 200, 0, 1350)
+        MainFrame.Position = UDim2.new(1, -220, 0.5, -675)
+    end
+    
     MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
@@ -623,15 +640,22 @@ local success, uiError = pcall(function()
     Title.TextSize = 16
     Title.Parent = MainFrame
     
-    -- Hotkey info label
+    -- Hotkey info label  
     local HotkeyInfo = Instance.new("TextLabel")
-    HotkeyInfo.Size = UDim2.new(1, 0, 0, 80)
+    
+    if isMobile then
+        HotkeyInfo.Size = UDim2.new(1, 0, 0, 100)
+        HotkeyInfo.Text = "📱 MOBILE MODE:\nTap buttons below\nTo toggle features\n\n⚠️ Reduced lag mode"
+    else
+        HotkeyInfo.Size = UDim2.new(1, 0, 0, 80)
+        HotkeyInfo.Text = "🎮 HOTKEYS:\nZ = Silent Aim ON/OFF\nHOME = Aim Assist ON/OFF\nEND = ESP ON/OFF\n\n✅ Mouse Simulation Ready!"
+    end
+    
     HotkeyInfo.Position = UDim2.new(0, 0, 0, 30)
     HotkeyInfo.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     HotkeyInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
-    HotkeyInfo.Text = "🎮 HOTKEYS:\nZ = Silent Aim ON/OFF\nHOME = Aim Assist ON/OFF\nEND = ESP ON/OFF\n\n✅ Mouse Simulation Ready!"
     HotkeyInfo.Font = Enum.Font.SourceSans
-    HotkeyInfo.TextSize = 12
+    HotkeyInfo.TextSize = isMobile and 14 or 12
     HotkeyInfo.TextYAlignment = Enum.TextYAlignment.Top
     HotkeyInfo.Parent = MainFrame
     
@@ -648,13 +672,20 @@ end
 -- Create toggle function
 local function createToggle(name, default, y)
     local toggle = Instance.new("TextButton")
-    toggle.Size = UDim2.new(0.9, 0, 0, 25)
+    
+    if isMobile then
+        toggle.Size = UDim2.new(0.9, 0, 0, 40) -- Larger for touch
+        toggle.TextSize = 16
+    else
+        toggle.Size = UDim2.new(0.9, 0, 0, 25)
+        toggle.TextSize = 14
+    end
+    
     toggle.Position = UDim2.new(0.05, 0, 0, y)
     toggle.BackgroundColor3 = default and Color3.fromRGB(60, 180, 75) or Color3.fromRGB(180, 60, 60)
     toggle.Text = name .. ": " .. (default and "ON" or "OFF")
     toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
     toggle.Font = Enum.Font.SourceSans
-    toggle.TextSize = 14
     toggle.Parent = MainFrame
     
     local value = default
@@ -710,51 +741,78 @@ end
 -- Create slider function
 local function createSlider(name, min, max, default, y)
     local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(0.9, 0, 0, 40)
+    
+    if isMobile then
+        sliderFrame.Size = UDim2.new(0.9, 0, 0, 60) -- Larger for mobile
+    else
+        sliderFrame.Size = UDim2.new(0.9, 0, 0, 40)
+    end
+    
     sliderFrame.Position = UDim2.new(0.05, 0, 0, y)
     sliderFrame.BackgroundTransparency = 1
     sliderFrame.Parent = MainFrame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Size = UDim2.new(1, 0, 0, isMobile and 25 or 20)
     label.BackgroundTransparency = 1
     label.Text = name .. ": " .. default
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.Font = Enum.Font.SourceSans
-    label.TextSize = 14
+    label.TextSize = isMobile and 16 or 14
     label.Parent = sliderFrame
     
     local slider = Instance.new("TextButton")
-    slider.Size = UDim2.new(1, 0, 0, 4)
-    slider.Position = UDim2.new(0, 0, 0.7, 0)
+    
+    if isMobile then
+        slider.Size = UDim2.new(1, 0, 0, 25) -- Thicker slider for touch
+        slider.Position = UDim2.new(0, 0, 0, 30)
+    else
+        slider.Size = UDim2.new(1, 0, 0, 4)
+        slider.Position = UDim2.new(0, 0, 0.7, 0)
+    end
+    
     slider.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     slider.Text = ""
     slider.AutoButtonColor = false
     slider.Parent = sliderFrame
+    
+    -- Add corner radius for mobile
+    if isMobile then
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = slider
+    end
     
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(60, 180, 75)
     fill.Parent = slider
     
+    -- Mobile corner radius for fill too
+    if isMobile then
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(0, 8)
+        fillCorner.Parent = fill
+    end
+    
     local dragging = false
     
-    slider.MouseButton1Down:Connect(function()
-        dragging = true
-    end)
-    
-    userInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    slider.MouseMoved:Connect(function()
+    -- Mobile-friendly touch handling
+    local function updateSlider(input)
         if dragging then
-            local percent = math.clamp((userInputService:GetMouseLocation().X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
+            local percent = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
             local value = min + (max - min) * percent
             fill.Size = UDim2.new(percent, 0, 1, 0)
-            label.Text = name .. ": " .. math.floor(value * 100) / 100
+            
+            -- Round values for better display
+            local displayValue
+            if max > 10 then
+                displayValue = math.floor(value)
+            else
+                displayValue = math.floor(value * 100) / 100
+            end
+            
+            label.Text = name .. ": " .. displayValue
             
             if name == "Smoothness" then
                 SETTINGS.smoothness = value
@@ -771,6 +829,40 @@ local function createSlider(name, min, max, default, y)
             elseif name == "Silent Aim Prediction Amount" then
                 SETTINGS.silentAimPredictionAmount = value
             end
+        end
+    end
+    
+    -- Touch/Mouse down
+    slider.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+    
+    -- Touch/Mouse up
+    userInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    -- Mouse moved (PC)
+    slider.MouseMoved:Connect(function()
+        if not isMobile then
+            updateSlider(userInputService:GetMouseLocation())
+        end
+    end)
+    
+    -- Touch moved (Mobile)
+    userInputService.TouchMoved:Connect(function(touch, gameProcessed)
+        if isMobile and dragging and not gameProcessed then
+            updateSlider(touch)
+        end
+    end)
+    
+    -- Direct tap/click for quick adjustments (Mobile)
+    slider.MouseButton1Click:Connect(function()
+        if isMobile then
+            local mousePos = userInputService:GetMouseLocation()
+            updateSlider({Position = mousePos})
         end
     end)
 end
@@ -862,44 +954,120 @@ local targetOptions = {"Head", "Torso", "Legs", "Neck"}
 local silentAimMethods = {"Raycast", "FindPartOnRay", "FindPartOnRayWithIgnoreList", "FindPartOnRayWithWhitelist", "Mouse.Hit/Target"}
 local silentAimTargets = {"Head", "HumanoidRootPart"}
 
--- Create UI Elements
-createToggle("Aim Assist", false, 120)
-createToggle("Magic Bullet", false, 150)
-createToggle("Universal Silent Aim", false, 180)
-createToggle("ESP", true, 210)
-createToggle("Box ESP", true, 240)
-createToggle("Name ESP", true, 270)
-createToggle("Snap Lines", true, 300)
-createToggle("Health Bar", true, 330)
-createToggle("No Recoil", false, 360)
-createToggle("Silent Aim Team Check", false, 390)
-createToggle("Silent Aim Visible Check", false, 420)
-createToggle("Silent Aim Prediction", false, 450)
-createToggle("Smooth Silent Aim", true, 480)
-createToggle("Restore Mouse Position", true, 510)
+-- Create UI Elements (Mobile optimized)
+if isMobile then
+    -- Mobile: Essential features only to reduce lag
+    createToggle("Aim Assist", false, 140)
+    createToggle("Universal Silent Aim", false, 190) 
+    createToggle("ESP", true, 240)
+    createToggle("Smooth Silent Aim", false, 290) -- Off by default for mobile
+    
+    -- Mobile-friendly sliders with bigger touch targets
+    createSlider("Smoothness", 0.1, 1, SETTINGS.smoothness, 350)
+    createSlider("FOV", 30, 180, SETTINGS.aimFov, 430)
+    createSlider("Silent Aim FOV", 30, 360, SETTINGS.silentAimFOV, 510)
+    
+    -- Quick preset buttons for mobile
+    local presetFrame = Instance.new("Frame")
+    presetFrame.Size = UDim2.new(0.9, 0, 0, 80)
+    presetFrame.Position = UDim2.new(0.05, 0, 0, 590)
+    presetFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    presetFrame.Parent = MainFrame
+    
+    local presetCorner = Instance.new("UICorner")
+    presetCorner.CornerRadius = UDim.new(0, 10)
+    presetCorner.Parent = presetFrame
+    
+    local presetTitle = Instance.new("TextLabel")
+    presetTitle.Size = UDim2.new(1, 0, 0, 25)
+    presetTitle.BackgroundTransparency = 1
+    presetTitle.Text = "📱 Quick Presets"
+    presetTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    presetTitle.Font = Enum.Font.SourceSansBold
+    presetTitle.TextSize = 14
+    presetTitle.Parent = presetFrame
+    
+    -- Preset buttons
+    local function createPresetButton(text, callback, x)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.3, -5, 0, 35)
+        btn.Position = UDim2.new(x, 0, 0, 40)
+        btn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+        btn.Text = text
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 12
+        btn.Parent = presetFrame
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 5)
+        btnCorner.Parent = btn
+        
+        btn.MouseButton1Click:Connect(callback)
+        return btn
+    end
+    
+    createPresetButton("🎯 Legit", function()
+        SETTINGS.smoothness = 0.3
+        SETTINGS.aimFov = 60
+        SETTINGS.silentAimFOV = 90
+        print("📱 Legit preset applied!")
+    end, 0.02)
+    
+    createPresetButton("⚡ Rage", function()
+        SETTINGS.smoothness = 0.8
+        SETTINGS.aimFov = 120
+        SETTINGS.silentAimFOV = 180
+        print("📱 Rage preset applied!")
+    end, 0.35)
+    
+    createPresetButton("🔧 Reset", function()
+        SETTINGS.smoothness = 0.5
+        SETTINGS.aimFov = 100
+        SETTINGS.silentAimFOV = 130
+        print("📱 Settings reset!")
+    end, 0.68)
+    
+else
+    -- PC: Full feature set
+    createToggle("Aim Assist", false, 120)
+    createToggle("Magic Bullet", false, 150)
+    createToggle("Universal Silent Aim", false, 180)
+    createToggle("ESP", true, 210)
+    createToggle("Box ESP", true, 240)
+    createToggle("Name ESP", true, 270)
+    createToggle("Snap Lines", true, 300)
+    createToggle("Health Bar", true, 330)
+    createToggle("No Recoil", false, 360)
+    createToggle("Silent Aim Team Check", false, 390)
+    createToggle("Silent Aim Visible Check", false, 420)
+    createToggle("Silent Aim Prediction", false, 450)
+    createToggle("Smooth Silent Aim", true, 480)
+    createToggle("Restore Mouse Position", true, 510)
 
-createDropdown("Trigger Key", keyOptions, "X", 540)
-createDropdown("Target Point", targetOptions, "Head", 610)
-createDropdown("Silent Aim Method", silentAimMethods, "Mouse.Hit/Target", 680)
-createDropdown("Silent Aim Target", silentAimTargets, "HumanoidRootPart", 750)
+    createDropdown("Trigger Key", keyOptions, "X", 540)
+    createDropdown("Target Point", targetOptions, "Head", 610)
+    createDropdown("Silent Aim Method", silentAimMethods, "Mouse.Hit/Target", 680)
+    createDropdown("Silent Aim Target", silentAimTargets, "HumanoidRootPart", 750)
 
-createSlider("Smoothness", 0.1, 1, SETTINGS.smoothness, 820)
-createSlider("FOV", 30, 180, SETTINGS.aimFov, 890)
-createSlider("Max Distance", 100, 2000, SETTINGS.maxDistance, 960)
-createSlider("Silent Aim FOV", 30, 360, SETTINGS.silentAimFOV, 1030)
-createSlider("Silent Aim Hit Chance", 0, 100, SETTINGS.silentAimHitChance, 1100)
-createSlider("Silent Aim Smoothness", 0.1, 1, SETTINGS.silentAimSmoothness, 1170)
-createSlider("Silent Aim Prediction Amount", 0.1, 1, SETTINGS.silentAimPredictionAmount, 1240)
+    createSlider("Smoothness", 0.1, 1, SETTINGS.smoothness, 820)
+    createSlider("FOV", 30, 180, SETTINGS.aimFov, 890)
+    createSlider("Max Distance", 100, 2000, SETTINGS.maxDistance, 960)
+    createSlider("Silent Aim FOV", 30, 360, SETTINGS.silentAimFOV, 1030)
+    createSlider("Silent Aim Hit Chance", 0, 100, SETTINGS.silentAimHitChance, 1100)
+    createSlider("Silent Aim Smoothness", 0.1, 1, SETTINGS.silentAimSmoothness, 1170)
+    createSlider("Silent Aim Prediction Amount", 0.1, 1, SETTINGS.silentAimPredictionAmount, 1240)
+end
 
 -- Test button
 local testBtn = Instance.new("TextButton")
-testBtn.Size = UDim2.new(0.9, 0, 0, 35)
-testBtn.Position = UDim2.new(0.05, 0, 1, -130)
+testBtn.Size = UDim2.new(0.9, 0, 0, isMobile and 50 or 35)
+testBtn.Position = UDim2.new(0.05, 0, 1, isMobile and -140 or -130)
 testBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
 testBtn.Text = "🔧 TEST FUNCTIONS 🔧"
 testBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 testBtn.Font = Enum.Font.SourceSansBold
-testBtn.TextSize = 14
+testBtn.TextSize = isMobile and 16 or 14
 testBtn.Parent = MainFrame
 
 testBtn.MouseButton1Click:Connect(function()
@@ -908,13 +1076,13 @@ end)
 
 -- Panic button
 local panicBtn = Instance.new("TextButton")
-panicBtn.Size = UDim2.new(0.9, 0, 0, 35)
-panicBtn.Position = UDim2.new(0.05, 0, 1, -85)
+panicBtn.Size = UDim2.new(0.9, 0, 0, isMobile and 50 or 35)
+panicBtn.Position = UDim2.new(0.05, 0, 1, isMobile and -80 or -85)
 panicBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 panicBtn.Text = "🚨 PANIC BUTTON 🚨"
 panicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 panicBtn.Font = Enum.Font.SourceSansBold
-panicBtn.TextSize = 14
+panicBtn.TextSize = isMobile and 16 or 14
 panicBtn.Parent = MainFrame
 
 panicBtn.MouseButton1Click:Connect(function()
@@ -1047,71 +1215,92 @@ runService.RenderStepped:Connect(function()
     -- Update No Recoil
     removeRecoil()
     
-    -- Improved Smooth Silent Aim: Mouse Simulation Method
+    -- Optimized Silent Aim for Mobile: Reduced lag version
     if SETTINGS.silentAim and alternativeHooks.mouseHook then
+        local currentTime = tick()
         local isLeftClickPressed = userInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+        
+        -- Mobile optimization: Rate limiting
+        if isMobile and (currentTime - lastSilentAimTime) < silentAimCooldown then
+            return -- Skip this frame to reduce lag
+        end
         
         if isLeftClickPressed and not silentAiming then
             -- Start silent aiming
             silentAiming = true
-            originalMousePos = getMousePosition()
+            lastSilentAimTime = currentTime
+            
+            if not isMobile then
+                originalMousePos = getMousePosition()
+            end
             
             local target = getClosestPlayerForSilentAim()
             if target and calculateChance(SETTINGS.silentAimHitChance) then
                 local targetPos = target.Position
                 local screenPos, onScreen = camera:WorldToViewportPoint(targetPos)
                 
-                if onScreen and SETTINGS.smoothSilentAim then
-                    -- Smooth movement to target
-                    spawn(function()
-                        local startPos = originalMousePos
-                        local endPos = Vector2.new(screenPos.X, screenPos.Y)
-                        local smoothness = SETTINGS.silentAimSmoothness or 0.8
-                        
-                        for i = 0, 1, 0.1 do
-                            if not userInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then break end
+                if onScreen then
+                    if isMobile then
+                        -- Mobile: Instant movement only, no smoothing
+                        if mousemoveabs then
+                            mousemoveabs(screenPos.X, screenPos.Y)
+                            print("🎯 Mobile Silent Aim - Target:", target.Parent.Name)
+                        end
+                    elseif SETTINGS.smoothSilentAim then
+                        -- PC: Smooth movement 
+                        spawn(function()
+                            local startPos = originalMousePos
+                            local endPos = Vector2.new(screenPos.X, screenPos.Y)
+                            local smoothness = SETTINGS.silentAimSmoothness or 0.8
                             
-                            local lerpPos = startPos:Lerp(endPos, i * smoothness)
-                            
-                            if mousemoveabs then
-                                mousemoveabs(lerpPos.X, lerpPos.Y)
+                            for i = 0, 1, 0.2 do -- Reduced iterations for performance
+                                if not userInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then break end
+                                
+                                local lerpPos = startPos:Lerp(endPos, i * smoothness)
+                                
+                                if mousemoveabs then
+                                    mousemoveabs(lerpPos.X, lerpPos.Y)
+                                end
+                                
+                                if isMobile then
+                                    wait(0.02) -- Longer wait for mobile
+                                else
+                                    wait(0.001)
+                                end
                             end
                             
-                            wait(0.001) -- Very small delay for smooth movement
-                        end
-                        
-                        -- Final position
+                            -- Final position
+                            if mousemoveabs then
+                                mousemoveabs(endPos.X, endPos.Y)
+                            end
+                            
+                            print("🎯 Smooth Silent Aim - Target:", target.Parent.Name)
+                        end)
+                    else
+                        -- Instant movement
                         if mousemoveabs then
-                            mousemoveabs(endPos.X, endPos.Y)
+                            mousemoveabs(screenPos.X, screenPos.Y)
+                            print("🎯 Instant Silent Aim - Target:", target.Parent.Name)
                         end
-                        
-                        print("🎯 Smooth Silent Aim - Target:", target.Parent.Name)
-                    end)
-                elseif onScreen then
-                    -- Instant movement (original method)
-                    if mousemoveabs then
-                        mousemoveabs(screenPos.X, screenPos.Y)
-                        print("🎯 Instant Silent Aim - Target:", target.Parent.Name)
                     end
                 end
             end
         elseif not isLeftClickPressed and silentAiming then
-            -- Stop silent aiming and restore mouse position
+            -- Stop silent aiming
             silentAiming = false
             
-            if SETTINGS.restoreMousePosition and mousemoveabs then
-                -- Smooth restoration
+            -- Only restore on PC, not mobile to reduce lag
+            if not isMobile and SETTINGS.restoreMousePosition and mousemoveabs then
                 spawn(function()
                     local currentPos = getMousePosition()
                     local targetPos = originalMousePos
                     
-                    for i = 0, 1, 0.2 do
+                    for i = 0, 1, 0.3 do -- Faster restoration
                         local lerpPos = currentPos:Lerp(targetPos, i)
                         mousemoveabs(lerpPos.X, lerpPos.Y)
                         wait(0.01)
                     end
                     
-                    -- Final restoration
                     mousemoveabs(targetPos.X, targetPos.Y)
                 end)
             end
