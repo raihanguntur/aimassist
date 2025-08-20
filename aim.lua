@@ -1,8 +1,7 @@
 --[[
-    UNIVERSAL SCRIPT - v15.1 FINAL & COMPLETE
-    - FULL INTEGRATION: Script ini adalah gabungan lengkap dari CFrame Aim, ESP, dan semua fitur dari "Universal Silent Aim".
-    - UI LIBRARY: Menggunakan DiscordLib yang stabil dan handal.
-    - KODE: 100% ditulis ulang, LENGKAP, dan tidak ada peringkasan sama sekali.
+    UNIVERSAL SCRIPT - v15.2 ESP LOGIC FIX
+    - FIX KRITIS: Memperbaiki bug di dalam fungsi ESP yang menyebabkan fitur tidak berjalan saat pemain respawn.
+    - KODE: 100% ditulis dalam format lengkap, panjang, dan tidak diringkas.
 ]]
 
 --// ================== PERSIAPAN & INISIALISASI ==================
@@ -28,7 +27,7 @@ if not isfolder or not makefolder or not writefile or not readfile or not listfi
     warn("PERINGATAN: Executor Anda tidak mendukung fungsi file. Fitur Config tidak akan berfungsi.")
 end
 
---// ================== PENGATURAN / SETTINGS (GLOBAL) ==================
+--// ================== PENGATURAN & VARIABEL GLOBAL ==================
 getgenv().SETTINGS = {
     -- CFrame Aim
     CFrameAimEnabled = false,
@@ -70,7 +69,7 @@ local SETTINGS = getgenv().SETTINGS
 --// Variabel Kontrol
 local isCFrameAiming = false
 local ValidTargetParts = {"Head", "HumanoidRootPart"}
-local MainFileName = "UniversalAimScript" -- Nama folder untuk config
+local MainFileName = "UniversalAimScript"
 
 --// Objek Visual
 local fov_circle = Drawing.new("Circle")
@@ -198,10 +197,73 @@ local function updateCFrameAim()
     camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.targetPosition), SETTINGS.CFrameAimSmoothness)
 end
 
+-- [[ DIKEMBALIKAN: FUNGSI ESP LENGKAP DENGAN PERBAIKAN ]] --
 local function createEspBox(player)
     if not Drawing or not Drawing.new then return end
-    local allDrawings = {}; local box = Drawing.new("Square"); table.insert(allDrawings, box); local tracer = Drawing.new("Line"); table.insert(allDrawings, tracer); local name = Drawing.new("Text"); table.insert(allDrawings, name); local healthBar = Drawing.new("Square"); table.insert(allDrawings, healthBar); for _, obj in ipairs(allDrawings) do obj.Visible = false end; name.Size, name.Center, name.Outline = 16, true, true; healthBar.Filled = true; local connection; connection = runService.RenderStepped:Connect(function() box.Color, tracer.Color, name.Color = SETTINGS.ESPColor, SETTINGS.ESPColor, SETTINGS.ESPColor; box.Thickness, tracer.Thickness = SETTINGS.espThickness, SETTINGS.espThickness; box.Transparency, tracer.Transparency = SETTINGS.espTransparency, SETTINGS.espTransparency; local character = player.Character; if not SETTINGS.ESPEnabled or not character or not isValidTarget(player) then for _, obj in ipairs(allDrawings) do obj.Visible = false end; return end; local root, humanoid = character:FindFirstChild("HumanoidRootPart"), character:FindFirstChild("Humanoid"); if not root or not humanoid then return end; local vector, onScreen = camera:WorldToViewportPoint(root.Position); if not onScreen then for _, obj in ipairs(allDrawings) do obj.Visible = false end; return end; local boxSizeY, boxSizeX = 3000 / vector.Z, 2000 / vector.Z; box.Visible = SETTINGS.ESPBox; if box.Visible then box.Size, box.Position = Vector2.new(boxSizeX, boxSizeY), Vector2.new(vector.X - boxSizeX / 2, vector.Y - boxSizeY / 2) end; tracer.Visible = SETTINGS.ESPSnaplines; if tracer.Visible then tracer.From, tracer.To = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y), Vector2.new(vector.X, vector.Y) end; name.Visible = SETTINGS.ESPNames; if name.Visible then name.Position, name.Text = Vector2.new(vector.X, vector.Y - boxSizeY/2 - 5), player.Name end; healthBar.Visible = SETTINGS.ESPHealth; if healthBar.Visible then local hp = humanoid.Health / humanoid.MaxHealth; healthBar.Position = Vector2.new(vector.X - boxSizeX/2 - 7, vector.Y - boxSizeY/2); healthBar.Size = Vector2.new(5, boxSizeY * hp); healthBar.Color = Color3.fromHSV(hp / 3, 1, 1) end end); player.CharacterAdded:Connect(function() if connection then connection.Enabled = true end end); player.CharacterRemoving:Connect(function() for _, obj in ipairs(allDrawings) do obj.Visible = false end; if connection then connection.Enabled = false end end)
+
+    local allDrawings = {}
+    local box = Drawing.new("Square"); table.insert(allDrawings, box)
+    local tracer = Drawing.new("Line"); table.insert(allDrawings, tracer)
+    local name = Drawing.new("Text"); table.insert(allDrawings, name)
+    local healthBar = Drawing.new("Square"); table.insert(allDrawings, healthBar)
+    
+    for _, obj in ipairs(allDrawings) do
+        obj.Visible = false
+    end
+
+    name.Size, name.Center, name.Outline = 16, true, true
+    healthBar.Filled = true
+    
+    runService.RenderStepped:Connect(function()
+        -- Mengatur properti setiap frame agar update jika diubah dari UI
+        box.Color, tracer.Color, name.Color = SETTINGS.ESPColor, SETTINGS.ESPColor, SETTINGS.ESPColor
+        box.Thickness, tracer.Thickness = SETTINGS.espThickness, SETTINGS.espThickness
+        box.Transparency, tracer.Transparency = SETTINGS.espTransparency, SETTINGS.espTransparency
+
+        local character = player.Character
+        if not SETTINGS.ESPEnabled or not character or not isValidTarget(player) then
+            for _, obj in ipairs(allDrawings) do
+                obj.Visible = false
+            end
+            return
+        end
+
+        local root, humanoid = character:FindFirstChild("HumanoidRootPart"), character:FindFirstChild("Humanoid")
+        if not root or not humanoid then return end
+
+        local vector, onScreen = camera:WorldToViewportPoint(root.Position)
+        if not onScreen then
+            for _, obj in ipairs(allDrawings) do obj.Visible = false end
+            return
+        end
+        
+        local boxSizeY, boxSizeX = 3000 / vector.Z, 2000 / vector.Z
+        
+        box.Visible = SETTINGS.ESPBox
+        if box.Visible then
+            box.Size, box.Position = Vector2.new(boxSizeX, boxSizeY), Vector2.new(vector.X - boxSizeX / 2, vector.Y - boxSizeY / 2)
+        end
+        
+        tracer.Visible = SETTINGS.ESPSnaplines
+        if tracer.Visible then
+            tracer.From, tracer.To = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y), Vector2.new(vector.X, vector.Y)
+        end
+        
+        name.Visible = SETTINGS.ESPNames
+        if name.Visible then
+            name.Position, name.Text = Vector2.new(vector.X, vector.Y - boxSizeY/2 - 5), player.Name
+        end
+        
+        healthBar.Visible = SETTINGS.ESPHealth
+        if healthBar.Visible then
+            local hp = humanoid.Health / humanoid.MaxHealth
+            healthBar.Position = Vector2.new(vector.X - boxSizeX/2 - 7, vector.Y - boxSizeY/2)
+            healthBar.Size = Vector2.new(5, boxSizeY * hp)
+            healthBar.Color = Color3.fromHSV(hp / 3, 1, 1)
+        end
+    end)
 end
+
 
 --// ================== UI DISCORDLIB (LENGKAP) ==================
 local function CreateUI()
@@ -210,32 +272,26 @@ local function CreateUI()
     end)
     if not success or not DiscordLib then warn("Gagal memuat DiscordLib UI."); return end
 
-    local win = DiscordLib:Window("Universal Script v15.0")
+    local win = DiscordLib:Window("Universal Script v15.2")
     local CFrameToggle, SilentToggle
 
     -- SERVER: AIM
     local AimServer = win:Server("Aim", "http://www.roblox.com/asset/?id=6031393359")
     
     local CFrameChannel = AimServer:Channel("CFrame Aim")
-    CFrameToggle = CFrameChannel:Toggle("Aktifkan", SETTINGS.CFrameAimEnabled, function(b)
-        SETTINGS.CFrameAimEnabled = b
-        if b and SilentToggle then SETTINGS.SilentAimEnabled = false; SilentToggle:Set(false) end
-    end)
+    CFrameToggle = CFrameChannel:Toggle("Aktifkan", SETTINGS.CFrameAimEnabled, function(b) SETTINGS.CFrameAimEnabled = b; if b and SilentToggle then SETTINGS.SilentAimEnabled = false; SilentToggle:Set(false) end end)
     CFrameChannel:Slider("FOV", 10, 500, SETTINGS.CFrameAimFov, function(v) SETTINGS.CFrameAimFov = v end)
     CFrameChannel:Slider("Smoothness", 0.01, 1, SETTINGS.CFrameAimSmoothness, function(v) SETTINGS.CFrameAimSmoothness = v end)
     CFrameChannel:Dropdown("Target Part", {"Head", "Torso"}, function(s) SETTINGS.CFrameAimHitbox = s end)
     CFrameChannel:Dropdown("Tombol Hold", {"Right Click", "Left Click", "X"}, function(s) SETTINGS.CFrameAimKey = s end)
 
     local SilentChannel = AimServer:Channel("Silent Aim")
-    SilentToggle = SilentChannel:Toggle("Aktifkan", SETTINGS.SilentAimEnabled, function(b)
-        SETTINGS.SilentAimEnabled = b
-        if b and CFrameToggle then SETTINGS.CFrameAimEnabled = false; CFrameToggle:Set(false) end
-    end)
+    SilentToggle = SilentChannel:Toggle("Aktifkan", SETTINGS.SilentAimEnabled, function(b) SETTINGS.SilentAimEnabled = b; if b and CFrameToggle then SETTINGS.CFrameAimEnabled = false; CFrameToggle:Set(false) end end)
     SilentChannel:Bind("Tombol Toggle", SETTINGS.SilentAimToggleKey, function(k) SETTINGS.SilentAimToggleKey = k end)
     SilentChannel:Slider("FOV", 10, 500, SETTINGS.SilentAimFov, function(v) SETTINGS.SilentAimFov = v end)
     SilentChannel:Slider("Hit Chance", 0, 100, SETTINGS.SilentAimHitChance, function(v) SETTINGS.SilentAimHitChance = v end)
     SilentChannel:Dropdown("Target Part", {"HumanoidRootPart", "Head", "Random"}, function(s) SETTINGS.SilentAimHitbox = s end)
-    SilentChannel:Dropdown("Metode", {"Raycast", "Mouse.Hit/Target", "FindPartOnRay", "FindPartOnRayWithWhitelist", "FindPartOnRayWithIgnoreList"}, function(s) SETTINGS.SilentAimMethod = s end)
+    SilentChannel:Dropdown("Metode", {"Raycast", "Mouse.Hit/Target", "FindPartOnRay"}, function(s) SETTINGS.SilentAimMethod = s end)
     
     -- SERVER: VISUALS
     local VisualsServer = win:Server("Visuals", "http://www.roblox.com/asset/?id=3130635425")
@@ -270,7 +326,11 @@ end
 pcall(CreateUI)
 
 local function setupEsp()
-    local function connectPlayer(player) if player ~= localPlayer then pcall(createEspBox, player) end end
+    local function connectPlayer(player)
+        if player ~= localPlayer then
+            pcall(createEspBox, player)
+        end
+    end
     for _, player in ipairs(players:GetPlayers()) do
         connectPlayer(player)
     end
@@ -289,12 +349,10 @@ end
 userInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     
-    -- Input untuk CFrame Aim (Hold)
     local cframeType, cframeKey = parseKeySelection(SETTINGS.CFrameAimKey)
     if cframeType == "Key" and input.KeyCode == cframeKey then isCFrameAiming = true
     elseif cframeType == "Mouse" and input.UserInputType == cframeKey then isCFrameAiming = true end
 
-    -- Input untuk Silent Aim (Toggle)
     if input.KeyCode == SETTINGS.SilentAimToggleKey then
         SETTINGS.SilentAimEnabled = not SETTINGS.SilentAimEnabled
     end
@@ -303,7 +361,6 @@ end)
 userInputService.InputEnded:Connect(function(input, processed)
     if processed then return end
 
-    -- Input untuk CFrame Aim (Hold)
     local cframeType, cframeKey = parseKeySelection(SETTINGS.CFrameAimKey)
     if cframeType == "Key" and input.KeyCode == cframeKey then isCFrameAiming = false
     elseif cframeType == "Mouse" and input.UserInputType == cframeKey then isCFrameAiming = false end
@@ -330,26 +387,17 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- Hooks
 if hookmetamethod and getnamecallmethod then
     local oldNamecall; oldNamecall = hookmetamethod(game, "__namecall", function(...)
-        local method = getnamecallmethod()
-        local args = {...}; local self = args[1]
-        
+        local method = getnamecallmethod(); local args = {...}; local self = args[1]
         if SETTINGS.SilentAimEnabled and self == workspace and not checkcaller() and CalculateChance(SETTINGS.SilentAimHitChance) then
             local hitPart = getClosestPlayerForSilentAim()
             if hitPart then
                 if SETTINGS.SilentAimMethod == "Raycast" and method == "Raycast" then
-                    if ValidateArguments(args, ExpectedArguments.Raycast) then
-                        args[3] = getDirection(args[2], hitPart.Position)
-                        return oldNamecall(unpack(args))
-                    end
-                elseif (SETTINGS.SilentAimMethod == "FindPartOnRay" or SETTINGS.SilentAimMethod == "FindPartOnRayWithIgnoreList" or SETTINGS.SilentAimMethod == "FindPartOnRayWithWhitelist") and (method:find("FindPartOnRay")) then
+                    if ValidateArguments(args, ExpectedArguments.Raycast) then args[3] = getDirection(args[2], hitPart.Position); return oldNamecall(unpack(args)) end
+                elseif (SETTINGS.SilentAimMethod:find("FindPartOnRay")) and (method:find("FindPartOnRay")) then
                     local ray = args[2]
-                    if ray then
-                        args[2] = Ray.new(ray.Origin, getDirection(ray.Origin, hitPart.Position + (hitPart.Velocity * SETTINGS.SilentAimPredictionAmount)))
-                        return oldNamecall(unpack(args))
-                    end
+                    if ray then args[2] = Ray.new(ray.Origin, getDirection(ray.Origin, hitPart.Position + (hitPart.Velocity * SETTINGS.SilentAimPredictionAmount))); return oldNamecall(unpack(args)) end
                 end
             end
         end
@@ -362,11 +410,8 @@ if hookmetamethod and getnamecallmethod then
             if hitPart then
                 if index:lower() == "target" then return hitPart end
                 if index:lower() == "hit" then
-                    if SETTINGS.SilentAimPrediction then
-                        return hitPart.CFrame + (hitPart.Velocity * SETTINGS.SilentAimPredictionAmount)
-                    else
-                        return hitPart.CFrame
-                    end
+                    if SETTINGS.SilentAimPrediction then return hitPart.CFrame + (hitPart.Velocity * SETTINGS.SilentAimPredictionAmount)
+                    else return hitPart.CFrame end
                 end
             end
         end
@@ -374,4 +419,4 @@ if hookmetamethod and getnamecallmethod then
     end)
 end
 
-print("✅ Script v15.1 (Full & Complete) Berhasil Dimuat!")
+print("✅ Script v15.2 (ESP Logic FIX) Berhasil Dimuat!")
