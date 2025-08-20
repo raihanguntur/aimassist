@@ -40,7 +40,7 @@ getgenv().flags = {
     SilentAimHitbox = "HumanoidRootPart",
     VisibleCheck = false,
     SilentAimKey = "Left Click",
-    SilentAimMethod = "Raycast", -- DITAMBAHKAN: Opsi untuk metode silent aim
+    SilentAimMethod = "Raycast",
 
     -- ESP
     ESPEnabled = true,
@@ -98,12 +98,7 @@ local function CreateUI()
     SilentChannel:Slider("Hit Chance", 0, 100, flags.HitChances, function(val) flags.HitChances = val end)
     SilentChannel:Dropdown("Target Part", {"HumanoidRootPart", "Head"}, function(selection) flags.SilentAimHitbox = selection end)
     SilentChannel:Dropdown("Tombol Hold", {"Left Click", "Right Click", "X"}, function(selection) flags.SilentAimKey = selection end)
-    
-    -- DITAMBAHKAN: Dropdown untuk memilih metode silent aim
-    SilentChannel:Dropdown("Metode", {"Raycast", "Mouse.Hit/Target", "FindPartOnRay"}, function(selection)
-        flags.SilentAimMethod = selection
-    end)
-
+    SilentChannel:Dropdown("Metode", {"Raycast", "Mouse.Hit/Target", "FindPartOnRay"}, function(selection) flags.SilentAimMethod = selection end)
     SilentChannel:Toggle("Cek Terlihat", flags.VisibleCheck, function(bool) flags.VisibleCheck = bool end)
 
     local VisualsServer = win:Server("Visuals", "http://www.roblox.com/asset/?id=3130635425")
@@ -138,7 +133,6 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- DIROMBAK: Hooks sekarang menggunakan metode yang dipilih dari UI
 if hookmetamethod and getnamecallmethod then
     local oldNamecall; oldNamecall = hookmetamethod(game, "__namecall", function(...)
         local method = getnamecallmethod()
@@ -148,19 +142,10 @@ if hookmetamethod and getnamecallmethod then
         if flags.SilentAimEnabled and isSilentAiming and self == workspace and not checkcaller() and CalculateChance(flags.HitChances) then
             local hitPart = getClosestPlayerForSilentAim()
             if hitPart then
-                -- Logika untuk metode Raycast
                 if flags.SilentAimMethod == "Raycast" and method == "Raycast" then
-                    if ValidateArguments(args, ExpectedArguments.Raycast) then
-                        args[3] = getDirection(args[2], hitPart.Position)
-                        return oldNamecall(unpack(args))
-                    end
-                -- Logika untuk metode FindPartOnRay
+                    if ValidateArguments(args, ExpectedArguments.Raycast) then args[3] = getDirection(args[2], hitPart.Position); return oldNamecall(unpack(args)) end
                 elseif flags.SilentAimMethod == "FindPartOnRay" and (method == "FindPartOnRay" or method == "findPartOnRay") then
-                     if ValidateArguments(args, ExpectedArguments.FindPartOnRay) then
-                        local ray = args[2]
-                        args[2] = Ray.new(ray.Origin, getDirection(ray.Origin, hitPart.Position))
-                        return oldNamecall(unpack(args))
-                    end
+                     if ValidateArguments(args, ExpectedArguments.FindPartOnRay) then local ray = args[2]; args[2] = Ray.new(ray.Origin, getDirection(ray.Origin, hitPart.Position)); return oldNamecall(unpack(args)) end
                 end
             end
         end
@@ -168,7 +153,6 @@ if hookmetamethod and getnamecallmethod then
     end)
     
     local oldIndex; oldIndex = hookmetamethod(game, "__index", function(self, index)
-        -- Logika untuk metode Mouse.Hit/Target
         if flags.SilentAimEnabled and isSilentAiming and flags.SilentAimMethod == "Mouse.Hit/Target" and self == mouse and not checkcaller() then
             local hitPart = getClosestPlayerForSilentAim()
             if hitPart then
