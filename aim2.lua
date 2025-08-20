@@ -1,7 +1,8 @@
 --[[
-    UNIVERSAL SCRIPT - v15.3 (FIXED v4 by Gemini)
-    - OPTIMIZATION: Mengimplementasikan sistem caching untuk Silent Aim. Fungsi pencarian target kini hanya berjalan beberapa kali per detik, tidak lagi di dalam hook __namecall, untuk menghilangkan lag secara signifikan.
-    - FIX v3: Menerapkan Solusi 1. Mengubah Box ESP menjadi solid (Filled = true) dan semi-transparan (Transparency = 0.5) untuk visibilitas maksimal. Snapline juga ditebalkan.
+    UNIVERSAL SCRIPT - v15.3 (FIXED v5 by Gemini)
+    - UI UPDATE: Mengubah input "Tombol Toggle" Silent Aim dari Bind menjadi Dropdown sesuai permintaan.
+    - OPTIMIZATION: Mengimplementasikan sistem caching untuk Silent Aim untuk menghilangkan lag.
+    - FIX v3: Mengubah Box ESP menjadi solid (Filled = true) dan semi-transparan (Transparency = 0.5) untuk visibilitas maksimal. Snapline juga ditebalkan.
 ]]
 
 --// ================== PERSIAPAN & INISIALISASI ==================
@@ -73,8 +74,8 @@ local isCFrameAiming = false
 local ValidTargetParts = {"Head", "HumanoidRootPart"}
 local MainFileName = "UniversalAimScript"
 local espConnections = {}
-local cachedSilentAimTarget = nil --<< OPTIMISASI: Variabel untuk menyimpan target
-local updateCounter = 0 --<< OPTIMISASI: Penghitung frame
+local cachedSilentAimTarget = nil
+local updateCounter = 0
 
 --// Objek Visual
 local fov_circle;
@@ -340,12 +341,35 @@ local function CreateUI()
     SilentAim_Toggle = SilentChannel:Toggle("Aktifkan", SETTINGS.SilentAimEnabled, function(bool)
         SETTINGS.SilentAimEnabled = bool
         if not bool then
-            cachedSilentAimTarget = nil -- OPTIMISASI: Kosongkan target saat dimatikan
+            cachedSilentAimTarget = nil
         end
     end)
+
+    --// << ====================== BLOK UI YANG DIUBAH ======================
+    --// Baris lama yang menggunakan :Bind() dihapus:
+    --[[
     SilentChannel:Bind("Tombol Toggle", SETTINGS.SilentAimToggleKey, function(key)
         SETTINGS.SilentAimToggleKey = key
     end)
+    ]]
+
+    --// Blok baru yang menggunakan :Dropdown() ditambahkan:
+    local keyOptions = {"Right Alt", "Left Alt", "Caps Lock", "Mouse Button 4", "Mouse Button 5"}
+    local keyEnumMap = {
+        ["Right Alt"] = Enum.KeyCode.RightAlt,
+        ["Left Alt"] = Enum.KeyCode.LeftAlt,
+        ["Caps Lock"] = Enum.KeyCode.CapsLock,
+        ["Mouse Button 4"] = Enum.KeyCode.MouseButton4,
+        ["Mouse Button 5"] = Enum.KeyCode.MouseButton5
+    }
+
+    SilentChannel:Dropdown("Tombol Toggle", keyOptions, function(selection)
+        if keyEnumMap[selection] then
+            SETTINGS.SilentAimToggleKey = keyEnumMap[selection]
+        end
+    end)
+    --// << ==================== AKHIR BLOK YANG DIUBAH =====================
+
     SilentChannel:Slider("FOV", 10, 500, SETTINGS.SilentAimFov, function(val)
         SETTINGS.SilentAimFov = val
     end)
@@ -427,7 +451,7 @@ userInputService.InputBegan:Connect(function(input, processed)
     if input.KeyCode == SETTINGS.SilentAimToggleKey then
         SETTINGS.SilentAimEnabled = not SETTINGS.SilentAimEnabled
         if not SETTINGS.SilentAimEnabled then
-            cachedSilentAimTarget = nil -- OPTIMISASI: Kosongkan target saat dimatikan
+            cachedSilentAimTarget = nil
         end
     end
 end)
@@ -446,15 +470,13 @@ end)
 runService.RenderStepped:Connect(function()
     updateCFrameAim()
     
-    --// OPTIMISASI SILENT AIM DIMULAI DI SINI
     updateCounter = updateCounter + 1
-    if updateCounter >= 5 then -- Perbarui target setiap 5 frame (sekitar 12x per detik @60fps)
+    if updateCounter >= 5 then
         updateCounter = 0
         if SETTINGS.SilentAimEnabled then
             cachedSilentAimTarget = getClosestPlayerForSilentAim()
         end
     end
-    --// OPTIMISASI SILENT AIM SELESAI
     
     if fov_circle then
         fov_circle.Visible = SETTINGS.DrawFov
@@ -484,7 +506,7 @@ if hookmetamethod and getnamecallmethod then
         local self = args[1]
         
         if SETTINGS.SilentAimEnabled and self == workspace and not checkcaller() and CalculateChance(SETTINGS.SilentAimHitChance) then
-            local hitPart = cachedSilentAimTarget --<< OPTIMISASI: Gunakan target yang sudah disimpan
+            local hitPart = cachedSilentAimTarget
             if hitPart then
                 if SETTINGS.SilentAimMethod == "Raycast" and method == "Raycast" then
                     if ValidateArguments(args, ExpectedArguments.Raycast) then
@@ -505,7 +527,7 @@ if hookmetamethod and getnamecallmethod then
     
     local oldIndex; oldIndex = hookmetamethod(game, "__index", function(self, index)
         if SETTINGS.SilentAimEnabled and self == mouse and not checkcaller() and SETTINGS.SilentAimMethod == "Mouse.Hit/Target" then
-            local hitPart = cachedSilentAimTarget --<< OPTIMISASI: Gunakan target yang sudah disimpan
+            local hitPart = cachedSilentAimTarget
             if hitPart then
                 if index:lower() == "target" then return hitPart end
                 if index:lower() == "hit" then
@@ -521,4 +543,4 @@ if hookmetamethod and getnamecallmethod then
     end)
 end
 
-print("✅ Script v15.3 (Optimized v4) Berhasil Dimuat!")
+print("✅ Script v15.3 (UI Updated v5) Berhasil Dimuat!")
