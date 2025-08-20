@@ -205,14 +205,17 @@ local function IsPlayerVisible(Player)
 end
 
 local function manageEspForPlayer(player)
-    print("DEBUG: Memulai manajemen ESP untuk " .. player.Name)
+    --// PERUBAHAN OLEH GEMINI -- Mulai
+    -- Dihapus: print("DEBUG: Memulai manajemen ESP untuk " .. player.Name)
+    -- Dihapus: print("DEBUG: Koneksi ESP untuk " .. player.Name .. " diputus.")
+    -- Dihapus: print("DEBUG: Membuat objek ESP baru untuk karakter " .. player.Name)
+    --// PERUBAHAN OLEH GEMINI -- Akhir
     
     local allDrawings = {}
     local connection = nil
 
     local function destroyEsp()
         if connection and connection.Connected then
-            print("DEBUG: Koneksi ESP untuk " .. player.Name .. " diputus.")
             connection:Disconnect()
         end
         connection = nil
@@ -228,7 +231,6 @@ local function manageEspForPlayer(player)
 
         if not Drawing or not Drawing.new then return end
 
-        print("DEBUG: Membuat objek ESP baru untuk karakter " .. player.Name)
         local box = Drawing.new("Square"); table.insert(allDrawings, box)
         local tracer = Drawing.new("Line"); table.insert(allDrawings, tracer)
         local name = Drawing.new("Text"); table.insert(allDrawings, name)
@@ -341,6 +343,13 @@ local function CreateUI()
         SETTINGS.SilentAimEnabled = bool
         if not bool then
             cachedSilentAimTarget = nil -- OPTIMISASI: Kosongkan target saat dimatikan
+            --// PERUBAHAN OLEH GEMINI -- Mulai
+            print("✅ Silent Aim dinonaktifkan.")
+            --// PERUBAHAN OLEH GEMINI -- Akhir
+        else
+            --// PERUBAHAN OLEH GEMINI -- Mulai
+            print("✅ Silent Aim diaktifkan.")
+            --// PERUBAHAN OLEH GEMINI -- Akhir
         end
     end)
     SilentChannel:Bind("Tombol Toggle", SETTINGS.SilentAimToggleKey, function(key)
@@ -363,10 +372,16 @@ local function CreateUI()
     local VisualsServer = win:Server("Visuals", "http://www.roblox.com/asset/?id=3130635425")
     
     local ESPChannel = VisualsServer:Channel("Player ESP")
-    ESPChannel:Toggle("Aktifkan ESP", SETTINGS.ESPEnabled, function(b) SETTINGS.ESPEnabled = b; print("DEBUG: ESP diubah ke:", b) end)
-    ESPChannel:Toggle("Box", SETTINGS.ESPBox, function(b) SETTINGS.ESPBox = b; print("DEBUG: ESP Box diubah ke:", b) end)
+    --// PERUBAHAN OLEH GEMINI -- Mulai
+    ESPChannel:Toggle("Aktifkan ESP", SETTINGS.ESPEnabled, function(b) SETTINGS.ESPEnabled = b end)
+    ESPChannel:Toggle("Box", SETTINGS.ESPBox, function(b) SETTINGS.ESPBox = b end)
     ESPChannel:Toggle("Nama", SETTINGS.ESPNames, function(b) SETTINGS.ESPNames = b end)
     ESPChannel:Toggle("Garis", SETTINGS.ESPSnaplines, function(b) SETTINGS.ESPSnaplines = b end)
+    -- Dihapus: ESPChannel:Toggle("Aktifkan ESP", SETTINGS.ESPEnabled, function(b) SETTINGS.ESPEnabled = b; print("DEBUG: ESP diubah ke:", b) end)
+    -- Dihapus: ESPChannel:Toggle("Box", SETTINGS.ESPBox, function(b) SETTINGS.ESPBox = b; print("DEBUG: ESP Box diubah ke:", b) end)
+    -- Dihapus: ESPChannel:Toggle("Nama", SETTINGS.ESPNames, function(b) SETTINGS.ESPNames = b end)
+    -- Dihapus: ESPChannel:Toggle("Garis", SETTINGS.ESPSnaplines, function(b) SETTINGS.ESPSnaplines = b end)
+    --// PERUBAHAN OLEH GEMINI -- Akhir
     ESPChannel:Toggle("Darah", SETTINGS.ESPHealth, function(b) SETTINGS.ESPHealth = b end)
     ESPChannel:Colorpicker("Warna ESP", SETTINGS.ESPColor, function(c) SETTINGS.ESPColor = c end)
 
@@ -392,7 +407,10 @@ end
 pcall(CreateUI)
 
 local function setupEsp()
-    print("DEBUG: Memulai setup ESP untuk semua pemain...")
+    --// PERUBAHAN OLEH GEMINI -- Mulai
+    -- Dihapus: print("DEBUG: Memulai setup ESP untuk semua pemain...")
+    -- Dihapus: print("DEBUG: Setup ESP selesai.")
+    --// PERUBAHAN OLEH GEMINI -- Akhir
     local function connectPlayer(player)
         if player ~= localPlayer then
             pcall(manageEspForPlayer, player)
@@ -402,7 +420,6 @@ local function setupEsp()
         connectPlayer(player)
     end
     players.PlayerAdded:Connect(connectPlayer)
-    print("DEBUG: Setup ESP selesai.")
 end
 setupEsp()
 
@@ -428,6 +445,13 @@ userInputService.InputBegan:Connect(function(input, processed)
         SETTINGS.SilentAimEnabled = not SETTINGS.SilentAimEnabled
         if not SETTINGS.SilentAimEnabled then
             cachedSilentAimTarget = nil -- OPTIMISASI: Kosongkan target saat dimatikan
+            --// PERUBAHAN OLEH GEMINI -- Mulai
+            print("✅ Silent Aim dinonaktifkan.")
+            --// PERUBAHAN OLEH GEMINI -- Akhir
+        else
+            --// PERUBAHAN OLEH GEMINI -- Mulai
+            print("✅ Silent Aim diaktifkan.")
+            --// PERUBAHAN OLEH GEMINI -- Akhir
         end
     end
 end)
@@ -450,8 +474,16 @@ runService.RenderStepped:Connect(function()
     updateCounter = updateCounter + 1
     if updateCounter >= 5 then -- Perbarui target setiap 5 frame (sekitar 12x per detik @60fps)
         updateCounter = 0
+        local oldTarget = cachedSilentAimTarget
         if SETTINGS.SilentAimEnabled then
             cachedSilentAimTarget = getClosestPlayerForSilentAim()
+            --// PERUBAHAN OLEH GEMINI -- Mulai
+            if cachedSilentAimTarget and cachedSilentAimTarget ~= oldTarget then
+                print("🎯 Target Silent Aim diperbarui. Target saat ini: " .. cachedSilentAimTarget.Parent.Name)
+            elseif not cachedSilentAimTarget and oldTarget then
+                print("❌ Kehilangan target Silent Aim.")
+            end
+            --// PERUBAHAN OLEH GEMINI -- Akhir
         end
     end
     --// OPTIMISASI SILENT AIM SELESAI
@@ -486,6 +518,9 @@ if hookmetamethod and getnamecallmethod then
         if SETTINGS.SilentAimEnabled and self == workspace and not checkcaller() and CalculateChance(SETTINGS.SilentAimHitChance) then
             local hitPart = cachedSilentAimTarget --<< OPTIMISASI: Gunakan target yang sudah disimpan
             if hitPart then
+                --// PERUBAHAN OLEH GEMINI -- Mulai
+                print("Silent Aim: Mengalihkan " .. method .. " ke " .. hitPart.Parent.Name .. "'s " .. hitPart.Name)
+                --// PERUBAHAN OLEH GEMINI -- Akhir
                 if SETTINGS.SilentAimMethod == "Raycast" and method == "Raycast" then
                     if ValidateArguments(args, ExpectedArguments.Raycast) then
                         args[3] = getDirection(args[2], hitPart.Position)
@@ -507,6 +542,9 @@ if hookmetamethod and getnamecallmethod then
         if SETTINGS.SilentAimEnabled and self == mouse and not checkcaller() and SETTINGS.SilentAimMethod == "Mouse.Hit/Target" then
             local hitPart = cachedSilentAimTarget --<< OPTIMISASI: Gunakan target yang sudah disimpan
             if hitPart then
+                --// PERUBAHAN OLEH GEMINI -- Mulai
+                print("Silent Aim: Mengubah mouse." .. index .. " ke " .. hitPart.Parent.Name .. "'s " .. hitPart.Name)
+                --// PERUBAHAN OLEH GEMINI -- Akhir
                 if index:lower() == "target" then return hitPart end
                 if index:lower() == "hit" then
                     if SETTINGS.SilentAimPrediction then
